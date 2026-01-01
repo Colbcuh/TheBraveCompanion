@@ -4,42 +4,38 @@ import java.io.File;
 
 public final class AppPaths {
 
-    private static final String APP_FOLDER = "TBC";
+    private static final String APP_NAME = "TBC";
 
     private AppPaths() {}
 
-    /**
-     * Base folder: %APPDATA%\TBC
-     * Example: C:\Users\<You>\AppData\Roaming\TBC
-     */
     public static File baseDir() {
-        String appData = System.getenv("APPDATA");
-        if (appData == null || appData.trim().isEmpty()) {
-            // Fallback (rare): user.home
-            return new File(System.getProperty("user.home"), APP_FOLDER);
+        String appData = System.getenv("APPDATA"); // Windows
+        File base;
+        if (appData != null && !appData.trim().isEmpty()) {
+            base = new File(appData, APP_NAME);
+        } else {
+            // Fallback for non-Windows
+            base = new File(System.getProperty("user.home"), "." + APP_NAME);
         }
-        return new File(appData, APP_FOLDER);
+        return base;
     }
 
-    /**
-     * %APPDATA%\TBC\logs
-     */
-    public static File logsDir() {
-        return new File(baseDir(), "logs");
+    public static File appDir() {
+        return new File(baseDir(), "app");
     }
 
-    /**
-     * %APPDATA%\TBC\cache
-     */
     public static File cacheDir() {
         return new File(baseDir(), "cache");
     }
 
-    /**
-     * %APPDATA%\TBC\app
-     * (Good place for version files, settings.json, etc.)
-     */
-    public static File appDir() {
-        return new File(baseDir(), "app");
+    public static File logsDir() {
+        return new File(baseDir(), "logs");
+    }
+
+    public static void ensureDirs() {
+        baseDir().mkdirs();
+        appDir().mkdirs();
+        cacheDir().mkdirs();
+        logsDir().mkdirs();
     }
 }

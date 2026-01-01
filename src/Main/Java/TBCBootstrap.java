@@ -6,11 +6,23 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.net.URL;
-import java.util.List;
+import java.nio.file.*;
+import java.util.Locale;
 
 public final class TBCBootstrap {
 
+    // ====== CONFIG YOU MUST SET ======
+    // GitHub repo for Releases
+    private static final String GITHUB_OWNER = "Colbcuh";
+    private static final String GITHUB_REPO  = "TheBraveCompanion";
+
+    // Your current version (bump when you publish a new release)
+    private static final String APP_VERSION_FALLBACK = "0.1.0";
+    // =================================
+
+    // Theme
     private static final Color BG_DARKEST = new Color(32, 34, 37);
     private static final Color BG_DARK    = new Color(44, 47, 51);
     private static final Color BG_MID     = new Color(54, 57, 63);
@@ -20,127 +32,281 @@ public final class TBCBootstrap {
 
     private static final int CORNER_RADIUS = 18;
 
-    // Make it visible long enough to read (adjust if you want longer)
-    private static final int MIN_VISIBLE_MS = 2500;
-
-    // If the GUI never appears, stop waiting after this long
-    private static final int GUI_APPEAR_TIMEOUT_MS = 8000;
-
     private TBCBootstrap() {}
 
     public static void main(String[] args) {
+        // Updater mode (runs from a temp copy so it can replace the original jar)
+        if (args != null && args.length > 0 && "--updater".equalsIgnoreCase(args[0])) {
+            runUpdaterMode(args);
+            return;
+        }
+
         CrashLogger.init("TBC");
+        AppPaths.ensureDirs();
 
         SwingUtilities.invokeLater(() -> {
             LauncherWindow win = new LauncherWindow();
             win.setVisible(true);
 
-            // Give Swing a brief moment to paint the window before doing work
-            new Timer(120, e -> {
-                ((Timer) e.getSource()).stop();
-                startWorker(win);
-            }).start();
-        });
-    }
+            SwingWorker<Void, String> worker = new SwingWorker<Void, String>() {
 
-    private static void startWorker(LauncherWindow win) {
-        final long start = System.currentTimeMillis();
+                boolean launchedUpdaterOrNewJar = false;
 
-        SwingWorker<Void, String> worker = new SwingWorker<Void, String>() {
-            @Override
-            protected Void doInBackground() {
-                try {
-                    publish("Starting…");
+                @Override
+                protected Void doInBackground() {
+                    try {
+                        publish("Preparing…");
 
-                    // Ensure folders exist
-                    AppPaths.baseDir().mkdirs();
-                    AppPaths.appDir().mkdirs();
-                    AppPaths.cacheDir().mkdirs();
-                    AppPaths.logsDir().mkdirs();
+                        // If not running from a jar (e.g., in IntelliJ), skip update
+                        Path currentJar = getRunningJarPathOrNull();
+                        if (currentJar == null) {
+                            publish("Launching…");
+                            return null;
+                        }
 
-                    publish("Preparing resources…");
-                    Thread.sleep(250);
+                        publish("Checking for updates…");
 
-                    publish("Launching TBC…");
-                    Thread.sleep(250);
+                        String currentVersion = VersionUtil.currentVersion(APP_VERSION_FALLBACK);
 
-                } catch (Throwable t) {
-                    CrashLogger.log("Bootstrap preflight failed", t);
+                        UpdateService.LatestRelease latest;
+                        try {
+                            latest = UpdateService.fetchLatestRelease(GITHUB_OWNER, GITHUB_REPO);
+                        } catch (Throwable t) {
+                            // Network / GitHub error: just launch
+                            publish("Launching…");
+                            return null;
+                        }
+
+                        if (!VersionUtil.isNewer(latest.version, currentVersion)) {
+                            publish("Up to date. Launching…");
+                            return null;
+                        }
+
+                        // Ask the user
+                        final boolean[] yes = new boolean[]{false};
+                        SwingUtilities.invokeAndWait(() -> {
+                            int choice = JOptionPane.showConfirmDialog(
+                                    win,
+                                    "Update available:\n\nCurrent: " + currentVersion +
+                                            "\nLatest: " + latest.version +
+                                            "\n\nInstall update now?",
+                                    "Update Available",
+                                    JOptionPane.YES_NO_OPTION,
+                                    JOptionPane.QUESTION_MESSAGE
+                            );
+                            yes[0] = (choice == JOptionPane.YES_OPTION);
+                        });
+
+                        if (!yes[0]) {
+                            publish("Launching…");
+                            return null;
+                        }
+
+                        publish("Downloading update…");
+
+                        // Download next to existing jar if possible
+                        Path jarDir = currentJar.getParent();
+                        String targetName = currentJar.getFileName().toString();
+                        Path newJar = jarDir.resolve(targetName + ".new");
+
+                        try {
+                            UpdateService.downloadTo(newJar, latest.jarUrl, text -> publish(text));
+                        } catch (Throwable t) {
+                            // Fallback: download to AppData and launch that (no replacement)
+                            Path fallback = Paths.get(AppPaths.appDir().getAbsolutePath(),
+                                    "TBC-" + latest.version + ".jar");
+
+                            UpdateService.downloadTo(fallback, latest.jarUrl, text -> publish(text));
+
+                            publish("Launching new version…");
+                            launchJar(fallback);
+                            launchedUpdaterOrNewJar = true;
+                            return null;
+                        }
+
+                        publish("Installing update…");
+
+                        // Copy THIS jar to a temp updater copy so it can replace the original.
+                        Path updaterJar = Paths.get(AppPaths.cacheDir().getAbsolutePath(), "updater.jar");
+                        Files.copy(currentJar, updaterJar, StandardCopyOption.REPLACE_EXISTING);
+
+                        // Launch updater copy in --updater mode, passing target and new paths.
+                        launchUpdater(updaterJar, currentJar, newJar);
+                        launchedUpdaterOrNewJar = true;
+
+                    } catch (Throwable t) {
+                        publish("Launching…");
+                    }
+                    return null;
                 }
-                return null;
-            }
 
-            @Override
-            protected void process(List<String> chunks) {
-                if (!chunks.isEmpty()) {
-                    win.setStatus(chunks.get(chunks.size() - 1));
+                @Override
+                protected void process(java.util.List<String> chunks) {
+                    if (!chunks.isEmpty()) {
+                        win.setStatus(chunks.get(chunks.size() - 1));
+                    }
                 }
-            }
 
-            @Override
-            protected void done() {
-                long elapsed = System.currentTimeMillis() - start;
-                int remaining = (int) Math.max(0, MIN_VISIBLE_MS - elapsed);
+                @Override
+                protected void done() {
+                    // If we launched updater/new jar, exit so file locks are released
+                    if (launchedUpdaterOrNewJar) {
+                        win.dispose();
+                        System.exit(0);
+                        return;
+                    }
 
-                // Wait until min visible time has passed, THEN launch GUI and wait until it appears
-                Timer afterMin = new Timer(remaining, e -> {
-                    ((Timer) e.getSource()).stop();
-
-                    // Request the GUI start
+                    // Otherwise launch normal app
+                    win.setStatus("Launching…");
                     TBCGUI.launch();
-
-                    // Now keep the loader up until the GUI is actually visible
-                    waitForGuiThenClose(win);
-
-                });
-                afterMin.setRepeats(false);
-                afterMin.start();
-            }
-        };
-
-        worker.execute();
-    }
-
-    private static void waitForGuiThenClose(LauncherWindow win) {
-        final long waitStart = System.currentTimeMillis();
-
-        Timer poll = new Timer(60, null);
-        poll.addActionListener(e -> {
-            boolean guiVisible = false;
-
-            for (Frame f : Frame.getFrames()) {
-                if (f != null && f.isVisible() && f != win) {
-                    guiVisible = true;
-                    break;
-                }
-            }
-
-            long waited = System.currentTimeMillis() - waitStart;
-
-            if (guiVisible) {
-                poll.stop();
-                win.dispose();
-                return;
-            }
-
-            if (waited >= GUI_APPEAR_TIMEOUT_MS) {
-                poll.stop();
-                win.setStatus("Still starting… (check logs if it hangs)");
-                // Leave window open a bit longer so the user can read the message
-                new Timer(1500, e2 -> {
-                    ((Timer) e2.getSource()).stop();
                     win.dispose();
-                }).start();
-            }
+                }
+            };
+
+            worker.execute();
         });
-        poll.start();
     }
 
-    // -------------------------------------------------------------------------
-    // Launcher Window
-    // -------------------------------------------------------------------------
-    private static final class LauncherWindow extends JFrame {
+    // ==============================
+    // Updater mode (runs from updater.jar copy)
+    // ==============================
+    private static void runUpdaterMode(String[] args) {
+        // args:
+        // 0 --updater
+        // 1 targetJarPath
+        // 2 newJarPath
+        if (args.length < 3) return;
 
+        final Path target = Paths.get(args[1]);
+        final Path newJar  = Paths.get(args[2]);
+
+        SwingUtilities.invokeLater(() -> {
+            UpdaterWindow win = new UpdaterWindow();
+            win.setVisible(true);
+
+            SwingWorker<Void, String> worker = new SwingWorker<Void, String>() {
+                @Override
+                protected Void doInBackground() {
+                    publish("Waiting for app to close…");
+
+                    // Wait for the target jar to become replaceable
+                    boolean replaced = tryReplaceWithRetries(target, newJar, 60, 250);
+
+                    if (!replaced) {
+                        publish("Could not replace in folder. Installing to AppData…");
+                        try {
+                            AppPaths.ensureDirs();
+                            Path appJar = Paths.get(AppPaths.appDir().getAbsolutePath(), "TBC-latest.jar");
+                            safeMove(newJar, appJar);
+                            publish("Launching…");
+                            launchJar(appJar);
+                            return null;
+                        } catch (Throwable t) {
+                            publish("Update failed.");
+                            return null;
+                        }
+                    }
+
+                    publish("Launching updated version…");
+                    launchJar(target);
+                    return null;
+                }
+
+                @Override
+                protected void process(java.util.List<String> chunks) {
+                    if (!chunks.isEmpty()) win.setStatus(chunks.get(chunks.size() - 1));
+                }
+
+                @Override
+                protected void done() {
+                    win.dispose();
+                    System.exit(0);
+                }
+            };
+
+            worker.execute();
+        });
+    }
+
+    private static boolean tryReplaceWithRetries(Path target, Path newJar, int attempts, int sleepMs) {
+        for (int i = 0; i < attempts; i++) {
+            try {
+                Files.move(newJar, target, StandardCopyOption.REPLACE_EXISTING);
+                return true;
+            } catch (Exception ignored) {
+                try { Thread.sleep(sleepMs); } catch (InterruptedException ignored2) {}
+            }
+        }
+        return false;
+    }
+
+    private static void safeMove(Path from, Path to) throws Exception {
+        try {
+            Files.move(from, to, StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception e) {
+            Files.copy(from, to, StandardCopyOption.REPLACE_EXISTING);
+            try { Files.deleteIfExists(from); } catch (Exception ignored) {}
+        }
+    }
+
+    private static void launchUpdater(Path updaterJar, Path targetJar, Path newJar) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(
+                javawPath(),
+                "-jar",
+                updaterJar.toAbsolutePath().toString(),
+                "--updater",
+                targetJar.toAbsolutePath().toString(),
+                newJar.toAbsolutePath().toString()
+        );
+        pb.directory(updaterJar.getParent().toFile());
+        pb.start();
+    }
+
+    private static void launchJar(Path jar) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(
+                javawPath(),
+                "-jar",
+                jar.toAbsolutePath().toString()
+        );
+        pb.directory(jar.getParent().toFile());
+        pb.start();
+    }
+
+    private static String javawPath() {
+        String javaHome = System.getProperty("java.home");
+        boolean windows = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
+
+        if (windows) {
+            File javaw = new File(javaHome, "bin\\javaw.exe");
+            if (javaw.exists()) return javaw.getAbsolutePath();
+        }
+
+        File java = new File(javaHome, "bin\\java.exe");
+        if (java.exists()) return java.getAbsolutePath();
+
+        return windows ? "javaw" : "java";
+    }
+
+    private static Path getRunningJarPathOrNull() {
+        try {
+            URL url = TBCBootstrap.class.getProtectionDomain().getCodeSource().getLocation();
+            if (url == null) return null;
+
+            Path p = Paths.get(url.toURI());
+            String s = p.toString().toLowerCase(Locale.ROOT);
+            if (!s.endsWith(".jar")) return null;
+
+            return p.toAbsolutePath();
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    // ==============================
+    // UI windows
+    // ==============================
+
+    private static final class LauncherWindow extends JFrame {
         private final JLabel statusLabel;
 
         LauncherWindow() {
@@ -148,7 +314,6 @@ public final class TBCBootstrap {
             setUndecorated(true);
             setSize(520, 320);
             setLocationRelativeTo(null);
-
             setShape(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), CORNER_RADIUS, CORNER_RADIUS));
 
             JPanel root = new JPanel(new BorderLayout());
@@ -169,11 +334,10 @@ public final class TBCBootstrap {
             logo.setHorizontalAlignment(SwingConstants.CENTER);
 
             try {
-                URL url = TBCBootstrap.class.getResource("/tbc_logo.png");
-                if (url != null) {
-                    BufferedImage img = ImageIO.read(url);
-                    Image scaled = img.getScaledInstance(96, 96, Image.SCALE_SMOOTH);
-                    logo.setIcon(new ImageIcon(scaled));
+                URL u = TBCBootstrap.class.getResource("/tbc_logo.png");
+                if (u != null) {
+                    BufferedImage img = ImageIO.read(u);
+                    logo.setIcon(new ImageIcon(img.getScaledInstance(96, 96, Image.SCALE_SMOOTH)));
                 }
             } catch (Exception ignored) {}
 
@@ -216,7 +380,58 @@ public final class TBCBootstrap {
 
             center.add(bar);
             center.add(statusLabel);
+            card.add(center, BorderLayout.CENTER);
+        }
 
+        void setStatus(String text) {
+            statusLabel.setText(text);
+        }
+    }
+
+    private static final class UpdaterWindow extends JFrame {
+        private final JLabel statusLabel;
+
+        UpdaterWindow() {
+            super("Updating TBC");
+            setUndecorated(true);
+            setSize(520, 220);
+            setLocationRelativeTo(null);
+            setShape(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), CORNER_RADIUS, CORNER_RADIUS));
+
+            JPanel root = new JPanel(new BorderLayout());
+            root.setBackground(BG_DARKEST);
+            root.setBorder(new EmptyBorder(16, 16, 16, 16));
+            setContentPane(root);
+
+            JPanel card = new JPanel(new BorderLayout());
+            card.setBackground(BG_DARK);
+            card.setBorder(new EmptyBorder(18, 18, 18, 18));
+            root.add(card, BorderLayout.CENTER);
+
+            JLabel title = new JLabel("Updating…");
+            title.setForeground(TEXT);
+            title.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 20));
+            card.add(title, BorderLayout.NORTH);
+
+            JPanel center = new JPanel();
+            center.setOpaque(false);
+            center.setBorder(new EmptyBorder(12, 0, 0, 0));
+            center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+
+            JProgressBar bar = new JProgressBar();
+            bar.setIndeterminate(true);
+            bar.setBorderPainted(false);
+            bar.setForeground(ACCENT);
+            bar.setBackground(BG_MID);
+            bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 14));
+
+            statusLabel = new JLabel("Installing update…");
+            statusLabel.setForeground(MUTED);
+            statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            statusLabel.setBorder(new EmptyBorder(12, 2, 0, 0));
+
+            center.add(bar);
+            center.add(statusLabel);
             card.add(center, BorderLayout.CENTER);
         }
 

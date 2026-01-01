@@ -45,19 +45,13 @@ public class TBCGUI {
     private static final int OUTPUT_WIDTH  = 190;
     private static final int OUTPUT_HEIGHT = 420;
 
-    /**
-     * Dev entrypoint (running from IntelliJ).
-     * In release, your JAR Main-Class should be TBCBootstrap.
-     */
     public static void main(String[] args) {
-        // Errors-only logging (safe if bootstrap already initialized)
+        // Keep this for "run from IDE", but your shipped jar should use TBCBootstrap as Main Class.
         CrashLogger.init("TBC");
         launch();
     }
 
-    /**
-     * Public entrypoint for the bootstrap/launcher to start the UI.
-     */
+    // NEW: called by TBCBootstrap
     public static void launch() {
         SwingUtilities.invokeLater(TBCGUI::createAndShowGUI);
     }
