@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="TBC:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/TBC_jar</output-path>
+    <root id="archive" name="TBC.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/../src/Main/Resources/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="TBC" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/miglayout-core-5.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/miglayout-swing-5.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/gson-2.13.2.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

@@ -1,0 +1,30 @@
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Compiled/build output
+out/
+target/
+build/
+
+# Logs / runtime folders (never commit)
+logs/
+cache/
+tmp/
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Ignore release/build jars everywhere...
+*.jar
+# ...but keep dependency jars you store in /lib
+!lib/*.jar
+
+# Crash dumps
+hs_err_pid*
+replay_pid*

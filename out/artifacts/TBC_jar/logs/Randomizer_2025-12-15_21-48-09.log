@@ -1,0 +1,53 @@
+21:48:09.030 === Randomizer started Mon Dec 15 21:48:09 CST 2025 ===
+21:48:09.030 java.version=1.8.0_431
+21:48:09.030 user.dir=E:\Aram_Bravery\Boys_App\Randomizer\out\artifacts\TBC_jar
+21:48:09.267 [ERROR] Exception during AWT event dispatch: java.awt.event.InvocationEvent[INVOCATION_DEFAULT,runnable=Main.Java.TBCGUI$$Lambda$8/0x00000007c00d7028@750344e7,notifier=null,catchExceptions=false,when=1765856889045] on sun.awt.windows.WToolkit@4a272a67
+java.lang.NoClassDefFoundError: com/google/gson/JsonElement
+	at Main.Java.UB.<init>(UB.java:52)
+	at Main.Java.TBCGUI.createAndShowGUI(TBCGUI.java:90)
+	at java.awt.event.InvocationEvent.dispatch(Unknown Source)
+	at java.awt.EventQueue.dispatchEventImpl(Unknown Source)
+	at java.awt.EventQueue.access$500(Unknown Source)
+	at java.awt.EventQueue$3.run(Unknown Source)
+	at java.awt.EventQueue$3.run(Unknown Source)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(Unknown Source)
+	at java.awt.EventQueue.dispatchEvent(Unknown Source)
+	at Main.Java.CrashLogger$2.dispatchEvent(CrashLogger.java:108)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.awt.EventDispatchThread.run(Unknown Source)
+Caused by: java.lang.ClassNotFoundException: com.google.gson.JsonElement
+	at java.net.URLClassLoader.findClass(Unknown Source)
+	at java.lang.ClassLoader.loadClass(Unknown Source)
+	at sun.misc.Launcher$AppClassLoader.loadClass(Unknown Source)
+	at java.lang.ClassLoader.loadClass(Unknown Source)
+	... 17 more
+21:48:09.268 [ERROR] Uncaught exception in thread: AWT-EventQueue-1
+java.lang.NoClassDefFoundError: com/google/gson/JsonElement
+	at Main.Java.UB.<init>(UB.java:52)
+	at Main.Java.TBCGUI.createAndShowGUI(TBCGUI.java:90)
+	at java.awt.event.InvocationEvent.dispatch(Unknown Source)
+	at java.awt.EventQueue.dispatchEventImpl(Unknown Source)
+	at java.awt.EventQueue.access$500(Unknown Source)
+	at java.awt.EventQueue$3.run(Unknown Source)
+	at java.awt.EventQueue$3.run(Unknown Source)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(Unknown Source)
+	at java.awt.EventQueue.dispatchEvent(Unknown Source)
+	at Main.Java.CrashLogger$2.dispatchEvent(CrashLogger.java:108)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.awt.EventDispatchThread.run(Unknown Source)
+Caused by: java.lang.ClassNotFoundException: com.google.gson.JsonElement
+	at java.net.URLClassLoader.findClass(Unknown Source)
+	at java.lang.ClassLoader.loadClass(Unknown Source)
+	at sun.misc.Launcher$AppClassLoader.loadClass(Unknown Source)
+	at java.lang.ClassLoader.loadClass(Unknown Source)
+	... 17 more
