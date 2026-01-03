@@ -1,68 +1,48 @@
-# =========================
-# OS / misc
-# =========================
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# =========================
-# IntelliJ IDEA
-# =========================
+###############################################################################
+# IntelliJ / JetBrains
+###############################################################################
 .idea/
 *.iml
 *.ipr
 *.iws
 
-# =========================
-# Build outputs
-# =========================
+###############################################################################
+# Build output / artifacts (DO NOT COMMIT)
+###############################################################################
 out/
 **/out/
 target/
+**/target/
+build/
+**/build/
+
+###############################################################################
+# Logs (DO NOT COMMIT)
+###############################################################################
 logs/
 **/logs/
-build/
-dist/
-*.class
-
-# =========================
-# Logs / runtime output
-# =========================
-logs/
 *.log
 
-# If you ever write cache/temp files into the project folder
-cache/
-tmp/
-temp/
+###############################################################################
+# OS junk
+###############################################################################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# =========================
-# Packaged artifacts (do NOT commit)
-# =========================
+###############################################################################
+# Optional: prevent committing shipped binaries
+# (Recommended if your updater uses GitHub Releases assets, not repo files)
+###############################################################################
 *.jar
-*.war
-*.ear
+*.exe
+*.msi
 *.zip
+*.7z
 
-# BUT allow dependency jars inside /lib (see below)
-!lib/*.jar
-
-# =========================
-# Local libraries (dependency jars)
-# =========================
-# Ignore everything in /lib by default...
-lib/*
-
-# ...then allow ONLY the runtime jars you actually need:
-!lib/gson-*.jar
-!lib/miglayout-core-[0-9]*.jar
-!lib/miglayout-swing-[0-9]*.jar
-
-# Still ignore source/javadoc jars (even if someone drops them in /lib)
-lib/*-sources.jar
-lib/*-javadoc.jar
-
-# =========================
-# Crash dumps
-# =========================
-hs_err_pid*.log
+###############################################################################
+# Optional: local cache folders if you add them later
+###############################################################################
+cache/
+**/cache/
