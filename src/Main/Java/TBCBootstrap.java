@@ -33,7 +33,7 @@ public final class TBCBootstrap {
     // ----------------------------
 
     // 1) Your app's current version (bump this each release)
-    private static final String CURRENT_VERSION = "0.1.0";
+    private static final String CURRENT_VERSION = "0.1.1";
 
     // 2) Your GitHub owner/user
     private static final String GITHUB_OWNER = "Colbcuh";

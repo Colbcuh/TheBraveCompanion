@@ -1,30 +1,65 @@
-# IntelliJ
+# =========================
+# OS / misc
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# IntelliJ IDEA
+# =========================
 .idea/
 *.iml
 *.ipr
 *.iws
 
-# Compiled/build output
+# =========================
+# Build outputs
+# =========================
 out/
 target/
 build/
+dist/
+*.class
 
-# Logs / runtime folders (never commit)
+# =========================
+# Logs / runtime output
+# =========================
 logs/
-cache/
-tmp/
 *.log
 
-# OS junk
-.DS_Store
-Thumbs.db
-Desktop.ini
+# If you ever write cache/temp files into the project folder
+cache/
+tmp/
+temp/
 
-# Ignore release/build jars everywhere...
+# =========================
+# Packaged artifacts (do NOT commit)
+# =========================
 *.jar
-# ...but keep dependency jars you store in /lib
+*.war
+*.ear
+*.zip
+
+# BUT allow dependency jars inside /lib (see below)
 !lib/*.jar
 
+# =========================
+# Local libraries (dependency jars)
+# =========================
+# Ignore everything in /lib by default...
+lib/*
+
+# ...then allow ONLY the runtime jars you actually need:
+!lib/gson-*.jar
+!lib/miglayout-core-[0-9]*.jar
+!lib/miglayout-swing-[0-9]*.jar
+
+# Still ignore source/javadoc jars (even if someone drops them in /lib)
+lib/*-sources.jar
+lib/*-javadoc.jar
+
+# =========================
 # Crash dumps
-hs_err_pid*
-replay_pid*
+# =========================
+hs_err_pid*.log
